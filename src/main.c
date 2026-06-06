@@ -10,6 +10,7 @@
 #include "unused.h"
 #include "object.h"
 #include "vec.h"
+#include "render.h"
 
 static const int WINDOW_WIDTH  = 1600;
 static const int WINDOW_HEIGHT = 960;
@@ -19,79 +20,6 @@ static const int GAME_HEIGHT = 300;
 static const float UNIT_SIZE = GAME_WIDTH / 50;
 
 static int FPS = 120;
-
-static uint32_t *PIXEL_BUFFER = NULL;
-
-struct color {
-        uint8_t r;
-        uint8_t g;
-        uint8_t b;
-};
-
-void set_pixel(struct vec2f pos, struct color color)
-{
-        const int x = (int)roundf(pos.x);
-        const int y = GAME_HEIGHT - (int)roundf(pos.y) - 1;
-        if(x >= 0 && x < GAME_WIDTH && y >= 0 && y < GAME_HEIGHT) {
-                PIXEL_BUFFER[(int)y * GAME_WIDTH + (int)x] = (color.r << 16) | (color.g << 8) | color.b;
-        }
-}
-
-void clear_screen(struct color color)
-{
-        for(int y = 0; y < GAME_HEIGHT; ++y) {
-                for(int x = 0; x < GAME_WIDTH; ++x) {
-                        set_pixel((struct vec2f){x, y}, color);
-                }
-        }
-}
-
-void draw_rectangle(struct vec2f pos, struct vec2f size, struct color color)
-{
-        for(int i = 0; i < (int)size.x; ++i) {
-                for(int j = 0; j < (int)size.y; ++j) {
-                        set_pixel((struct vec2f){pos.x + j, pos.y + i}, color);
-                }
-        }
-}
-
-// ORIGINAL FROM: https://gist.github.com/bert/1085538#file-plot_line-c
-void draw_line(struct vec2f a, struct vec2f b, struct color color)
-{
-        int x0 = a.x, y0 = a.y;
-        int x1 = b.x, y1 = b.y;
-        int dx = abs (x1 - x0), sx = x0 < x1 ? 1 : -1;
-        int dy = -abs (y1 - y0), sy = y0 < y1 ? 1 : -1;
-        int err = dx + dy, e2;
-
-        while(!(x0 == x1 && y0 == y1)) {
-                set_pixel((struct vec2f){x0,y0}, color);
-                e2 = 2 * err;
-                if (e2 >= dy) {
-                        err += dy;
-                        x0 += sx;
-                }
-                if (e2 <= dx) {
-                        err += dx;
-                        y0 += sy;
-                }
-        }
-
-        set_pixel((struct vec2f){x0,y0}, color);
-}
-
-uint64_t get_current_milliseconds()
-{
-        struct timespec ts;
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
-}
-
-static double DELTA_TIME = 0;
-double get_delta_time()
-{
-        return DELTA_TIME;
-}
 
 struct conveyor {
         struct conveyor *previous;
@@ -121,7 +49,7 @@ void conveyor_set_speed(struct conveyor *conveyor, float units_per_second)
 void conveyor_render(void *conveyor_ptr)
 {
         struct conveyor *conveyor = conveyor_ptr;
-        draw_line(conveyor->start, conveyor->end, (struct color){0x20, 0xff, 0x00});
+        render_draw_line(conveyor->start, conveyor->end, (struct color){0x20, 0xff, 0x00});
 
         if(conveyor->next != NULL && conveyor->next->previous != NULL) {
                 conveyor_render(conveyor->next);
@@ -134,14 +62,14 @@ void item_render(void *item_ptr)
         struct vec2f conveyor_vector = vec2f_subtract(item->conveyor->end, item->conveyor->start);
         struct vec2f pos = vec2f_add(item->conveyor->start, vec2f_scale(conveyor_vector, item->interpolation));
         const  struct vec2f size = {GAME_WIDTH / 64.0f, GAME_WIDTH / 64.0f};
-        draw_rectangle(vec2f_subtract(pos, vec2f_scale(size, 0.5f)), (struct vec2f){5, 5}, (struct color){0xff, 0x20, 0x00});
+        render_draw_rectangle(vec2f_subtract(pos, vec2f_scale(size, 0.5f)), (struct vec2f){5, 5}, (struct color){0xff, 0x20, 0x00});
 }
 
 void item_update(void *item_ptr)
 {
         struct item *item = item_ptr;
         struct conveyor *conveyor = item->conveyor;
-        item->interpolation += conveyor->interpolation_per_unit * conveyor->units_per_second * get_delta_time();
+        item->interpolation += conveyor->interpolation_per_unit * conveyor->units_per_second * render_get_delta_time();
         if(item->interpolation >= 1.0f) {
                 if(conveyor->next == NULL) {
                         item->interpolation = 1.0f;
@@ -202,33 +130,9 @@ int main(int argc, char **argv)
         UNUSED(argc);
         UNUSED(argv);
 
-        if(!SDL_Init(SDL_INIT_VIDEO))
-                return -1;
-
-        SDL_Window *window   = NULL;
-        SDL_Renderer *renderer = NULL;
-        if(!SDL_CreateWindowAndRenderer("Factory", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer)) {
-                SDL_Quit();
-                return -1;
+        if(!render_initialize_system("factory", WINDOW_WIDTH, WINDOW_HEIGHT, GAME_WIDTH, GAME_HEIGHT, FPS)) {
+                printf("Could not initialize render system\n");
         }
-
-        PIXEL_BUFFER = malloc(sizeof(PIXEL_BUFFER[0]) * GAME_WIDTH * GAME_HEIGHT);
-        if(PIXEL_BUFFER == NULL) {
-                SDL_Quit();
-                return -1;
-        }
-
-        SDL_Texture *screen_texture = SDL_CreateTexture(
-                        renderer,
-                        SDL_PIXELFORMAT_XRGB8888,
-                        SDL_TEXTUREACCESS_STREAMING,
-                        GAME_WIDTH, GAME_HEIGHT
-        );
-
-        SDL_SetTextureScaleMode(screen_texture, SDL_SCALEMODE_NEAREST);
-
-        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xff);
-        SDL_RenderClear(renderer);
 
         object_initialize_system();
 
@@ -252,7 +156,6 @@ int main(int argc, char **argv)
         printf("GAME: Starting...\n");
 
         bool running = true;
-        uint64_t last_milliseconds = get_current_milliseconds();
         SDL_Event event;
         while(running) {
                 while(SDL_PollEvent(&event)) {
@@ -262,29 +165,17 @@ int main(int argc, char **argv)
                         }
                 }
 
-                clear_screen((struct color){0x20, 0x20, 0x20});
+                render_clear_screen((struct color){0x20, 0x20, 0x20});
 
                 object_call_on_all(OBJ_FUNCTION_UPDATE);
                 object_call_on_all(OBJ_FUNCTION_RENDER);
 
-                SDL_UpdateTexture(screen_texture, NULL, PIXEL_BUFFER, GAME_WIDTH * sizeof(PIXEL_BUFFER[0]));
-
-                SDL_RenderTexture(renderer, screen_texture, NULL, NULL);
-                SDL_RenderPresent(renderer);
-
-                uint64_t current_milliseconds = get_current_milliseconds();
-                DELTA_TIME = (current_milliseconds - last_milliseconds) / 1000.0;
-                last_milliseconds = current_milliseconds;
-
-                float delay_time = 1000 / FPS - DELTA_TIME;
-                if(delay_time > 0) {
-                        SDL_Delay(delay_time);
-                }
+                render_present();
         }
 
-        SDL_DestroyTexture(screen_texture);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
+        //SDL_DestroyTexture(screen_texture);
+        //SDL_DestroyRenderer(renderer);
+        //SDL_DestroyWindow(window);
+        //SDL_Quit();
         return 0;
 }

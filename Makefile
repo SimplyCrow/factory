@@ -10,7 +10,7 @@ all: fact
 src/%.o: src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-fact: src/main.o src/object.o src/vec.o
+fact: src/main.o src/object.o src/vec.o src/render.o
 	$(LD) $(LD_FLAGS) -o $@ $^ $(LD_LIBRARIES)
 
 .PHONY: clean
