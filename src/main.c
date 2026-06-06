@@ -9,6 +9,7 @@
 
 #include "unused.h"
 #include "object.h"
+#include "vec.h"
 
 static const int WINDOW_WIDTH  = 1600;
 static const int WINDOW_HEIGHT = 960;
@@ -21,56 +22,11 @@ static int FPS = 120;
 
 static uint32_t *PIXEL_BUFFER = NULL;
 
-struct vec2f {
-        float x;
-        float y;
-};
-
 struct color {
         uint8_t r;
         uint8_t g;
         uint8_t b;
 };
-
-float vec2f_dot(struct vec2f a, struct vec2f b)
-{
-        return a.x * b.x + a.y * b.y;
-}
-
-struct vec2f vec2f_add(struct vec2f a, struct vec2f b)
-{
-        return (struct vec2f){a.x + b.x, a.y + b.y};
-}
-
-struct vec2f vec2f_subtract(struct vec2f a, struct vec2f b)
-{
-        return (struct vec2f){a.x - b.x, a.y - b.y};
-}
-
-struct vec2f vec2f_scale(struct vec2f a, float scale)
-{
-        return (struct vec2f){a.x * scale, a.y * scale};
-}
-
-float vec2f_length(struct vec2f a)
-{
-        return sqrt(vec2f_dot(a, a));
-}
-
-float vec2f_distance(struct vec2f a, struct vec2f b)
-{
-        return vec2f_length(vec2f_subtract(b, a));
-}
-
-struct vec2f vec2f_normalize(struct vec2f a)
-{
-        return vec2f_scale(a, 1.0f / vec2f_length(a));
-}
-
-struct vec2f vec2f_direction(struct vec2f base, struct vec2f direction)
-{
-        return vec2f_normalize(vec2f_subtract(direction, base));
-}
 
 void set_pixel(struct vec2f pos, struct color color)
 {
