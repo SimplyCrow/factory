@@ -50,10 +50,6 @@ void conveyor_render(void *conveyor_ptr)
 {
         struct conveyor *conveyor = conveyor_ptr;
         render_draw_line(conveyor->start, conveyor->end, (struct color){0x20, 0xff, 0x00});
-
-        if(conveyor->next != NULL && conveyor->next->previous != NULL) {
-                conveyor_render(conveyor->next);
-        }
 }
 
 void item_render(void *item_ptr)
@@ -94,13 +90,12 @@ struct item *item_create(struct conveyor *conveyor, float interpolation)
 
 struct conveyor **generate_conveyor_circle(size_t points, float radius)
 {
-        struct conveyor **convs = malloc(sizeof(void*) * points);
-        struct vec2f center = {GAME_WIDTH / 2.0f, GAME_HEIGHT / 2.0f};
+        struct conveyor **convs = object_allocate_array(points, sizeof(**convs));
         for(size_t i = 0; i < points; ++i) {
-                convs[i] = object_allocate(sizeof(**convs));
                 object_set_function(convs[i], OBJ_FUNCTION_RENDER, conveyor_render);
         }
 
+        struct vec2f center = {GAME_WIDTH / 2.0f, GAME_HEIGHT / 2.0f};
         for(size_t i = 0; i < points; ++i) {
 
                 if(i == 0) {
@@ -156,6 +151,7 @@ int main(int argc, char **argv)
         printf("GAME: Starting...\n");
 
         bool running = true;
+        double runtime = 0.0;
         SDL_Event event;
         while(running) {
                 while(SDL_PollEvent(&event)) {

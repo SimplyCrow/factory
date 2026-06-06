@@ -133,6 +133,27 @@ void *object_allocate(size_t object_size)
         return OBJECT_TO_PAYLOAD_PTR(obj);
 }
 
+void *object_allocate_array(size_t object_count, size_t object_size)
+{
+        LOGF("Allocating %zu objects with size %zu.", object_count, object_size);
+        const size_t size_of_object = sizeof(struct object) + object_size;
+        uint8_t* objects    = malloc(object_count * size_of_object);
+        void **object_array = malloc(object_count * sizeof(void*));
+        for(size_t i = 0; i < object_count; ++i) {
+                struct object *obj = (struct object *)(objects + size_of_object * i);
+                obj->payload_size = object_size;
+                memset(obj->functions, 0, sizeof(obj->functions));
+                object_register(obj);
+                if(i == 0) {
+                        object_set_function(OBJECT_TO_PAYLOAD_PTR(obj), OBJ_FUNCTION_FREE, object_free);
+                }
+
+                object_array[i] = OBJECT_TO_PAYLOAD_PTR(obj);
+        }
+
+        return object_array;
+}
+
 void *object_allocate_and_start(size_t object_size, void (*start_func)(void *self))
 {
         void *object = object_allocate(object_size);

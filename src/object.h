@@ -14,6 +14,7 @@ enum OBJECT_FUNCTIONS {
 
 void object_initialize_system();
 void *object_allocate(size_t object_size);
+void *object_allocate_array(size_t object_count, size_t object_size);
 void *object_allocate_and_start(size_t object_size, void (*start_func)(void *self));
 void object_free(void *object);
 bool object_set_function(void *object, enum OBJECT_FUNCTIONS function_type, void (*func)(void *self));
