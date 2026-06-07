@@ -37,6 +37,16 @@ struct item {
         float interpolation;
 };
 
+struct cluster_item {
+        struct conveyor *conveyor;
+        float interpolation;
+};
+
+struct cluster {
+        struct conveyor *conveyor;
+        struct cluster_item *head;
+};
+
 void conveyor_set_speed(struct conveyor *conveyor, float units_per_second)
 {
         conveyor->units_per_second = units_per_second;
@@ -151,7 +161,6 @@ int main(int argc, char **argv)
         printf("GAME: Starting...\n");
 
         bool running = true;
-        double runtime = 0.0;
         SDL_Event event;
         while(running) {
                 while(SDL_PollEvent(&event)) {
