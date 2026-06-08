@@ -127,7 +127,7 @@ void *object_allocate(size_t object_size)
         LOGF("Allocating object with size %zu.", object_size);
         struct object* obj = malloc(sizeof(struct object) + object_size);
         obj->payload_size = object_size;
-        memset(obj->functions, 0, sizeof(obj->functions));
+        memset(obj, 0, sizeof(struct object) + object_size);
         object_register(obj);
         object_set_function(OBJECT_TO_PAYLOAD_PTR(obj), OBJ_FUNCTION_FREE, object_free);
         return OBJECT_TO_PAYLOAD_PTR(obj);
