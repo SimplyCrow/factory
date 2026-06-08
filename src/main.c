@@ -11,129 +11,25 @@
 #include "object.h"
 #include "vec.h"
 #include "render.h"
+#include "conveyor.h"
+#include "constants.h"
 
-static const int WINDOW_WIDTH  = 1600;
-static const int WINDOW_HEIGHT = 960;
+#define LOG_TITLE "Main"
+#include "log.h"
 
-static const int GAME_WIDTH  = 500;
-static const int GAME_HEIGHT = 300;
-static const float UNIT_SIZE = GAME_WIDTH / 50;
-
-static int FPS = 120;
-
-struct conveyor {
-        struct conveyor *previous;
-        struct conveyor *next;
-
-        struct vec2f start;
-        struct vec2f end;
-
-        float interpolation_per_unit;
-        float units_per_second;
-};
-
-struct item {
-        struct conveyor *conveyor;
-        float interpolation;
-};
-
-struct cluster_item {
-        struct conveyor *conveyor;
-        float interpolation;
-};
-
-struct cluster {
-        struct conveyor *conveyor;
-        struct cluster_item *head;
-};
-
-void conveyor_set_speed(struct conveyor *conveyor, float units_per_second)
-{
-        conveyor->units_per_second = units_per_second;
-
-        const float length = vec2f_distance(conveyor->start, conveyor->end);
-        const float units = length / UNIT_SIZE;
-        conveyor->interpolation_per_unit = 1.0f / units;
-}
-
-void conveyor_render(void *conveyor_ptr)
-{
-        struct conveyor *conveyor = conveyor_ptr;
-        render_draw_line(conveyor->start, conveyor->end, (struct color){0x20, 0xff, 0x00});
-}
-
-void item_render(void *item_ptr)
-{
-        struct item *item = item_ptr;
-        struct vec2f conveyor_vector = vec2f_subtract(item->conveyor->end, item->conveyor->start);
-        struct vec2f pos = vec2f_add(item->conveyor->start, vec2f_scale(conveyor_vector, item->interpolation));
-        const  struct vec2f size = {GAME_WIDTH / 64.0f, GAME_WIDTH / 64.0f};
-        render_draw_rectangle(vec2f_subtract(pos, vec2f_scale(size, 0.5f)), (struct vec2f){5, 5}, (struct color){0xff, 0x20, 0x00});
-}
-
-void item_update(void *item_ptr)
-{
-        struct item *item = item_ptr;
-        struct conveyor *conveyor = item->conveyor;
-        item->interpolation += conveyor->interpolation_per_unit * conveyor->units_per_second * render_get_delta_time();
-        if(item->interpolation >= 1.0f) {
-                if(conveyor->next == NULL) {
-                        item->interpolation = 1.0f;
-                } else {
-                        item->interpolation = 0.0f;
-                        item->conveyor = item->conveyor->next;
-                }
-        }
-}
-
-struct item *item_create(struct conveyor *conveyor, float interpolation)
-{
-        struct item *item = object_allocate(sizeof(struct item));
-        *item = (struct item){
-                .conveyor = conveyor,
-                .interpolation = interpolation
-        };
-        object_set_function(item, OBJ_FUNCTION_UPDATE, item_update);
-        object_set_function(item, OBJ_FUNCTION_RENDER, item_render);
-        return item;
-}
-
-struct conveyor **generate_conveyor_circle(size_t points, float radius)
-{
-        struct conveyor **convs = object_allocate_array(points, sizeof(**convs));
-        for(size_t i = 0; i < points; ++i) {
-                object_set_function(convs[i], OBJ_FUNCTION_RENDER, conveyor_render);
-        }
-
-        struct vec2f center = {GAME_WIDTH / 2.0f, GAME_HEIGHT / 2.0f};
-        for(size_t i = 0; i < points; ++i) {
-
-                if(i == 0) {
-                        convs[i]->previous = NULL;
-                } else {
-                        convs[i]->previous = convs[i - 1];
-                }
-
-                size_t connect_to_point = i + 1;
-                if(i == points - 1) {
-                        convs[i]->next = convs[0];
-                        connect_to_point = 0;
-                } else {
-                        convs[i]->next = convs[i + 1];
-                }
-
-                float delta = (2.0f / points);
-                convs[i]->start = vec2f_add(center, vec2f_scale((struct vec2f){cosf(delta * i * M_PI), sinf(delta * i * M_PI)}, radius));
-                convs[i]->end   = vec2f_add(center, vec2f_scale((struct vec2f){cosf(delta * connect_to_point * M_PI), sinf(delta * connect_to_point * M_PI)}, radius));
-        }
-
-        return convs;
-}
+const int   WINDOW_WIDTH        = 1600;
+const int   WINDOW_HEIGHT       = 960;
+const int   GAME_WIDTH          = 500;
+const int   GAME_HEIGHT         = 300;
+const int   FPS                 = 120;
+const float METER_IN_PIXEL      = GAME_WIDTH / 50;
+const float ITEM_SIZE           = 1;
 
 int main(int argc, char **argv)
 {
         UNUSED(argc);
         UNUSED(argv);
+        UNUSED(ITEM_SIZE);
 
         if(!render_initialize_system("factory", WINDOW_WIDTH, WINDOW_HEIGHT, GAME_WIDTH, GAME_HEIGHT, FPS)) {
                 printf("Could not initialize render system\n");
@@ -141,32 +37,45 @@ int main(int argc, char **argv)
 
         object_initialize_system();
 
-        size_t convs_size = 12;
-        struct conveyor **convs = generate_conveyor_circle(convs_size, GAME_HEIGHT * 0.4);
-
-        const float max_speed = 160;
-        const float speed_per_point = max_speed / convs_size / 2.0f;
-        for(size_t i = 0; i < convs_size / 2; ++i) {
-                conveyor_set_speed(convs[i], (i + 1) * speed_per_point);
-                conveyor_set_speed(convs[convs_size - i - 1], (i + 1) * speed_per_point);
-        }
-
-        size_t slices = 1;
-        for(size_t i = 0; i < convs_size; ++i) {
-                for(size_t j = 0; j < slices; ++j) {
-                        UNUSED(item_create(convs[i], 1.0f / (slices + 1) * j));
-                }
-        }
+        struct conveyor *conveyor = conveyor_create((struct vec2f){10, GAME_HEIGHT / 2.0}, (struct vec2f){GAME_WIDTH - 10, GAME_HEIGHT / 2.0}, 60);
+        conveyor_append_item(conveyor);
 
         printf("GAME: Starting...\n");
 
         bool running = true;
+        bool space_pulling = false;
+        uint64_t fps_counter = 0;
+        double   fps_timer = 0.00;
         SDL_Event event;
         while(running) {
                 while(SDL_PollEvent(&event)) {
                         if(event.type == SDL_EVENT_QUIT) {
                                 running = false;
                                 break;
+                        }
+                        if(event.type == SDL_EVENT_KEY_DOWN) {
+                                switch(event.key.key) {
+                                        case SDLK_ESCAPE:
+                                                running = false;
+                                                break;
+                                        case SDLK_SPACE:
+                                                if(space_pulling)
+                                                        break;
+                                                conveyor_append_item(conveyor);
+                                                space_pulling = true;
+                                                break;
+                                }
+                                if(running == false)
+                                        break;
+                        }
+                        if(event.type == SDL_EVENT_KEY_UP) {
+                                switch(event.key.key) {
+                                        case SDLK_SPACE:
+                                                if(!space_pulling)
+                                                        break;
+                                                space_pulling = false;
+                                                break;
+                                }
                         }
                 }
 
@@ -175,12 +84,16 @@ int main(int argc, char **argv)
                 object_call_on_all(OBJ_FUNCTION_UPDATE);
                 object_call_on_all(OBJ_FUNCTION_RENDER);
 
+                ++fps_counter;
+                fps_timer += render_get_delta_time();
+                if(fps_timer >= 3.00) {
+                        LOGF("FPS: %lf", fps_counter / fps_timer);
+                        fps_timer = 0.00;
+                        fps_counter = 0;
+                }
+
                 render_present();
         }
 
-        //SDL_DestroyTexture(screen_texture);
-        //SDL_DestroyRenderer(renderer);
-        //SDL_DestroyWindow(window);
-        //SDL_Quit();
         return 0;
 }

@@ -11,8 +11,8 @@
 
 #include "vec.h"
 
-#define LOG(fmt)        printf("Render: "fmt"\n")
-#define LOGF(fmt, ...)  printf("Render: "fmt"\n", __VA_ARGS__)
+#define LOG_TITLE "Render"
+#include "log.h"
 
 static int WINDOW_WIDTH;
 static int WINDOW_HEIGHT;
@@ -30,7 +30,7 @@ static int FPS;
 static uint64_t LAST_MILLISECONDS;
 static double DELTA_TIME;
 
-static uint64_t get_current_milliseconds()
+static uint64_t render_get_current_milliseconds()
 {
         struct timespec ts;
         clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -80,7 +80,7 @@ bool render_initialize_system(const char *title, int window_width, int window_he
 
         render_clear_screen((struct color){0x00, 0x00, 0x00});
 
-        LAST_MILLISECONDS = get_current_milliseconds();
+        LAST_MILLISECONDS = render_get_current_milliseconds();
 
         LOG("Initialized render system");
         return true;
@@ -92,7 +92,7 @@ void render_present()
         SDL_RenderTexture(RENDERER, SCREEN_TEXTURE, NULL, NULL);
         SDL_RenderPresent(RENDERER);
 
-        uint64_t current_milliseconds = get_current_milliseconds();
+        uint64_t current_milliseconds = render_get_current_milliseconds();
         DELTA_TIME = (current_milliseconds - LAST_MILLISECONDS) / 1000.0;
         LAST_MILLISECONDS = current_milliseconds;
 

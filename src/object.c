@@ -75,7 +75,7 @@ static bool object_register(struct object *obj)
                         OBJECTS.free_list_index = OBJECTS.data[free_index].next_free_entry_index;
                         OBJECTS.data[free_index].obj = obj;
                         OBJECTS.data[free_index].obj->register_id = free_index;
-                        LOGF("Registered object %zu from free list.", free_index);
+                        LOGF("Registered object %zu from free list. (capacity: %zu)", free_index, OBJECTS.capacity);
                         return true;
                 }
                 OBJECTS.capacity = (OBJECTS.capacity * 2 > OBJECTS.capacity) ? OBJECTS.capacity * 2 : RESERVE_OBJECT_COUNT;
@@ -87,7 +87,7 @@ static bool object_register(struct object *obj)
         OBJECTS.data[index].obj = obj;
         OBJECTS.data[index].obj->register_id = index;
         ++OBJECTS.count;
-        LOGF("Registered object %zu.", index);
+        LOGF("Registered object %zu. (capacity: %zu)", index, OBJECTS.capacity);
         return true;
 }
 

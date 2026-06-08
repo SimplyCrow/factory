@@ -5,8 +5,8 @@ LDFLAGS := $(LDFLAGS) -fsanitize=address
 LDLIBS  := $(LDLIBS)  -lm
 
 # SDL
- CFLAGS  := $(CFLAGS) $(shell pkg-config --cflags sdl3)
- LDLIBS  := $(LDLIBS) $(shell pkg-config --libs   sdl3)
+CFLAGS  := $(CFLAGS) $(shell pkg-config --cflags sdl3)
+LDLIBS  := $(LDLIBS) $(shell pkg-config --libs   sdl3)
 
 .PHONY: all
 all: fact
@@ -14,7 +14,7 @@ all: fact
 src/%.o: src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-fact: src/main.o src/object.o src/vec.o src/render.o
+fact: src/main.o src/object.o src/vec.o src/render.o src/conveyor.o
 	$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 .PHONY: clean
