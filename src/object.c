@@ -12,8 +12,8 @@
 #define RESERVE_OBJECT_COUNT (128)
 #define EMPTY_FREE_LIST (SIZE_MAX)
 
-#define LOG(fmt, ...) printf("OBJECTS: "fmt"\n", __VA_ARGS__)
-#define LOGF(fmt, ...) printf("OBJECTS: "fmt"\n", __VA_ARGS__)
+#define LOG_TITLE "Objects"
+#include "log.h"
 
 const char *OBJECT_FUNCTIONS_STRING[] = {
         "OBJ_FUNCTION_START",
@@ -69,7 +69,7 @@ static bool object_register(struct object *obj)
                 object_initialize_system();
         }
 
-        if(OBJECTS.capacity >= OBJECTS.count) {
+        if(OBJECTS.capacity <= OBJECTS.count) {
                 if(OBJECTS.free_list_index != EMPTY_FREE_LIST) {
                         const size_t free_index = OBJECTS.free_list_index;
                         OBJECTS.free_list_index = OBJECTS.data[free_index].next_free_entry_index;
@@ -78,9 +78,9 @@ static bool object_register(struct object *obj)
                         LOGF("Registered object %zu from free list.", free_index);
                         return true;
                 }
-
-                size_t new_capacity = (OBJECTS.capacity * 2 > OBJECTS.capacity) ? OBJECTS.capacity * 2 : RESERVE_OBJECT_COUNT;
-                OBJECTS.data = reallocarray(OBJECTS.data, new_capacity, sizeof(*OBJECTS.data));
+                OBJECTS.capacity = (OBJECTS.capacity * 2 > OBJECTS.capacity) ? OBJECTS.capacity * 2 : RESERVE_OBJECT_COUNT;
+                LOGF("Resizing to %zu objects.", OBJECTS.capacity);
+                OBJECTS.data = reallocarray(OBJECTS.data, OBJECTS.capacity, sizeof(*OBJECTS.data));
         }
 
         const size_t index = OBJECTS.count;
