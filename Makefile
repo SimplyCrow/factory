@@ -1,6 +1,6 @@
 CC      := gcc
 LD      := gcc
-CFLAGS  := $(CFLAGS)  -Werror -Wall -Wextra -Wpedantic -MMD -MP -g -fsanitize=address
+CFLAGS  := $(CFLAGS)  -std=gnu11 -Werror -Wall -Wextra -Wpedantic -MMD -MP -g -fsanitize=address
 LDFLAGS := $(LDFLAGS) -fsanitize=address
 LDLIBS  := $(LDLIBS)  -lm
 

@@ -2,6 +2,7 @@
 #define OBJECT_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 enum OBJECT_FUNCTIONS {
         OBJ_FUNCTION_START = 0,

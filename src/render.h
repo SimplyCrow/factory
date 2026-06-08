@@ -2,6 +2,7 @@
 #define RENDER_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "vec.h"
 
