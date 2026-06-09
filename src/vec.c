@@ -2,6 +2,8 @@
 
 #include <math.h>
 
+#include "constants.h"
+
 float vec2f_dot(struct vec2f a, struct vec2f b)
 {
         return a.x * b.x + a.y * b.y;
@@ -40,4 +42,14 @@ struct vec2f vec2f_normalize(struct vec2f a)
 struct vec2f vec2f_direction(struct vec2f base, struct vec2f direction)
 {
         return vec2f_normalize(vec2f_subtract(direction, base));
+}
+
+struct vec2f vec2f_world_to_pixel(struct vec2f vec)
+{
+        return vec2f_scale(vec, METER_IN_PIXEL);
+}
+
+struct vec2f vec2f_pixel_to_world(struct vec2f vec)
+{
+        return vec2f_scale(vec, 1.0 / METER_IN_PIXEL);
 }

@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 
         object_initialize_system();
 
-        struct conveyor *conveyor = conveyor_create((struct vec2f){10, GAME_HEIGHT / 2.0}, (struct vec2f){GAME_WIDTH - 10, GAME_HEIGHT / 2.0}, 60);
+        struct conveyor *conveyor = conveyor_create(vec2f_pixel_to_world((struct vec2f){10, GAME_HEIGHT / 2.0}), vec2f_pixel_to_world((struct vec2f){GAME_WIDTH - 10, GAME_HEIGHT / 2.0}), 720);
         conveyor_append_item(conveyor);
 
         printf("GAME: Starting...\n");
@@ -83,6 +83,8 @@ int main(int argc, char **argv)
 
                 object_call_on_all(OBJ_FUNCTION_UPDATE);
                 object_call_on_all(OBJ_FUNCTION_RENDER);
+
+                //LOGF("Distance: %lf", conveyor_cluster_distance_to_next(conveyor, conveyor->head));
 
                 ++fps_counter;
                 fps_timer += render_get_delta_time();
